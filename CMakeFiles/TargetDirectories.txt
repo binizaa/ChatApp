@@ -1,0 +1,3 @@
+/home/binizarz/Escritorio/MyP/ChatApp/CMakeFiles/ChatApp.dir
+/home/binizarz/Escritorio/MyP/ChatApp/CMakeFiles/edit_cache.dir
+/home/binizarz/Escritorio/MyP/ChatApp/CMakeFiles/rebuild_cache.dir
