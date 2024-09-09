@@ -8,13 +8,13 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
-#include <algorithm>  // Incluir para std::remove
+#include <algorithm>  
 
 #define PORT 1234
 #define MAX_LEN 512
 
-std::vector<int> clients;        // Lista de sockets de clientes
-std::mutex clients_mutex;        // Mutex para proteger el acceso a la lista de clientes
+std::vector<int> clients;        
+std::mutex clients_mutex;       
 
 void handle_client(int client_socket);
 void broadcast_message(const std::string &message, int sender_socket);
@@ -63,15 +63,13 @@ int main() {
 
         std::cout << "Nuevo cliente conectado" << std::endl;
 
-        // Añadir el nuevo cliente a la lista de clientes
         {
             std::lock_guard<std::mutex> guard(clients_mutex);
             clients.push_back(new_socket);
         }
 
-        // Crear un hilo para manejar la conexión con el nuevo cliente
         std::thread t(handle_client, new_socket);
-        t.detach();  // Desacoplar el hilo para que funcione independientemente
+        t.detach();  
     }
 
     close(server_fd);
@@ -110,7 +108,6 @@ void handle_client(int client_socket) {
         std::string message = "Cliente " + std::to_string(client_socket) + ": " + buffer;
         std::cout << message;
 
-        // Enviar el mensaje a todos los clientes excepto al remitente
         broadcast_message(message, client_socket);
     }
 }
