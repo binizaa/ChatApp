@@ -8,36 +8,64 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
-#include <algorithm>  
+#include <algorithm>
 using namespace std;
 
-#define PORT 1234
 #define MAX_LEN 512
 
-std::vector<int> clients;        
-std::mutex clients_mutex;       
+std::vector<int> clients;
+std::mutex clients_mutex;
 
 void handle_client(int client_socket);
 void broadcast_message(const std::string &message, int sender_socket);
 
+// Función para eliminar espacios en blanco y saltos de línea
+std::string trim(const std::string &str) {
+    size_t first = str.find_first_not_of("\r\n");
+    size_t last = str.find_last_not_of("\r\n");
+    return str.substr(first, (last - first + 1));
+}
+
 int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        std::cerr << "Uso: " << argv[0] << " <IP> <Puerto>" << std::endl;
+        return 1;
+    }
+
+    std::string ip_address = argv[1];  // IP del primer argumento
+
+    // Si la IP es "localhost", usar la IP 127.0.0.1
+    if (ip_address == "localhost") {
+        ip_address = "127.0.0.1";
+    }
+
+    int port = stoi(argv[2]);  // Puerto del segundo argumento
+
     int server_fd, new_socket;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
 
+    // Crear el socket
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+   if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
         perror("setsockopt");
         exit(EXIT_FAILURE);
     }
+
+    // Configurar la estructura de la dirección
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(stoi(argv[2]));
+    address.sin_port = htons(port);  
+
+    // Convertir la dirección IP de texto a binario
+    if (inet_pton(AF_INET, ip_address.c_str(), &address.sin_addr) <= 0) {
+        perror("Dirección invalida");
+        exit(EXIT_FAILURE);
+    }
 
     // Vincular el socket a la dirección y puerto de red
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
@@ -51,10 +79,9 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    std::cout << "Servidor escuchando en el puerto " << argv[2] << std::endl;
+    std::cout << "Servidor escuchando en " << ip_address << ":" << port << std::endl;
 
     while (true) {
-        // Aceptar conexiones entrantes
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
             perror("accept");
             exit(EXIT_FAILURE);
@@ -68,12 +95,13 @@ int main(int argc, char *argv[]) {
         }
 
         std::thread t(handle_client, new_socket);
-        t.detach();  
+        t.detach();
     }
 
     close(server_fd);
     return 0;
 }
+
 
 void broadcast_message(const std::string &message, int sender_socket) {
     std::lock_guard<std::mutex> guard(clients_mutex);
@@ -82,16 +110,6 @@ void broadcast_message(const std::string &message, int sender_socket) {
             send(client_socket, message.c_str(), message.length(), 0);
         }
     }
-}
-
-#include <algorithm>
-#include <cctype>
-
-// Función para eliminar espacios en blanco y saltos de línea
-std::string trim(const std::string &str) {
-    size_t first = str.find_first_not_of("\r\n");
-    size_t last = str.find_last_not_of("\r\n");
-    return str.substr(first, (last - first + 1));
 }
 
 void handle_client(int client_socket) {
@@ -115,7 +133,7 @@ void handle_client(int client_socket) {
         }
 
         std::string message(buffer, bytes_read);
-        message = trim(message);  
+        message = trim(message);
 
         if (message == "/exit") {
             std::cout << "Cliente " << client_socket << " ha enviado /exit. Desconectando...\n";
@@ -126,7 +144,7 @@ void handle_client(int client_socket) {
                 std::lock_guard<std::mutex> guard(clients_mutex);
                 clients.erase(std::remove(clients.begin(), clients.end(), client_socket), clients.end());
             }
-            break;  // Salir del bucle para cerrar la conexión
+            break; 
         }
 
         message = "Cliente " + std::to_string(client_socket) + ": " + message + "\n";
@@ -135,4 +153,3 @@ void handle_client(int client_socket) {
         broadcast_message(message, client_socket);
     }
 }
-
