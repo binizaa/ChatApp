@@ -1,18 +1,30 @@
-# Versión mínima requerida de CMake
 cmake_minimum_required(VERSION 3.10)
+project(ChatApp)
 
-# Nombre del proyecto y versión
-project(ChatApp VERSION 1.0)
+set(CMAKE_CXX_STANDARD 17)
 
-# Establecer el estándar de C++
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-# Añadir el directorio include/ al path de búsqueda de cabeceras
 include_directories(include)
 
-# Añadir los archivos fuente
-add_executable(ChatApp src/main.cpp)
+# Localiza la biblioteca JSON
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP jsoncpp)
 
-# Enlazar bibliotecas (si fuera necesario)
-# target_link_libraries(MiProyecto libname)
+include_directories(${JSONCPP_INCLUDE_DIRS})
+link_directories(${JSONCPP_LIBRARY_DIRS})
+add_definitions(${JSONCPP_CFLAGS_OTHER})
+
+# Archivos fuente
+add_executable(server src/server.cpp)
+add_executable(client src/client.cpp src/fabricaDeJsons.cpp)
+
+# Agregar nlohmann/json desde GitHub
+include(FetchContent)
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.10.4
+)
+FetchContent_MakeAvailable(json)
+
+# Enlazar la librería JSON
+#target_link_libraries(chat_cliente PRIVATE nlohmann_json::nlohmann_json)
