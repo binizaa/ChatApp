@@ -1,4 +1,5 @@
 # ChatApp
+Juana Biniza Cruz Ruiz
 
 ChatApp es una aplicación de chat simple que permite la comunicación entre múltiples clientes conectados a un servidor utilizando sockets TCP/IP.
 
