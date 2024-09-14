@@ -1,19 +1,19 @@
-#ifndef FABRICA_DE_JSONS_H
-#define FABRICA_DE_JSONS_H
+#ifndef FABRICADEJSONS_H
+#define FABRICADEJSONS_H
 
 #include <string>
 #include <nlohmann/json.hpp>
 
+using json = nlohmann::json;
+using namespace std;
+
 class FabricaDeJsons {
 public:
-    // Función para crear el JSON de tipo IDENTIFY con el nombre de usuario
-    static std::string crearJsonIdentificacion(const std::string& username);
+    static json create_identify(const string& username);
 
-    // Función para crear el JSON de respuesta cuando la identificación es exitosa
-    static std::string crearJsonRespuestaSuccess(const std::string& username);
+    static json create_identify_response(const string& operation, const string& result, const string& username);
 
-    // Función para crear el JSON de respuesta cuando el usuario ya existe
-    static std::string crearJsonRespuestaUsuarioYaExiste(const std::string& username);
+    static json create_new_user(const string& username);
 };
 
-#endif // FABRICA_DE_JSONS_H
+#endif // FABRICADEJSONS_H
