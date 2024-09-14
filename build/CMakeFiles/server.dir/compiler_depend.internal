@@ -3,7 +3,6 @@
 
 CMakeFiles/server.dir/src/server.cpp.o
  /home/binizarz/Escritorio/MyP/ChatApp/src/server.cpp
- /home/binizarz/Escritorio/MyP/ChatApp/include/fabricaDeJsons.h
  /usr/include/alloca.h
  /usr/include/arpa/inet.h
  /usr/include/asm-generic/bitsperlong.h
@@ -93,6 +92,8 @@ CMakeFiles/server.dir/src/server.cpp.o
  /usr/include/c++/13/bits/sstream.tcc
  /usr/include/c++/13/bits/std_abs.h
  /usr/include/c++/13/bits/std_function.h
+ /usr/include/c++/13/bits/std_mutex.h
+ /usr/include/c++/13/bits/std_thread.h
  /usr/include/c++/13/bits/stl_algo.h
  /usr/include/c++/13/bits/stl_algobase.h
  /usr/include/c++/13/bits/stl_bvector.h
@@ -117,10 +118,11 @@ CMakeFiles/server.dir/src/server.cpp.o
  /usr/include/c++/13/bits/streambuf_iterator.h
  /usr/include/c++/13/bits/string_view.tcc
  /usr/include/c++/13/bits/stringfwd.h
+ /usr/include/c++/13/bits/this_thread_sleep.h
  /usr/include/c++/13/bits/uniform_int_dist.h
+ /usr/include/c++/13/bits/unique_lock.h
  /usr/include/c++/13/bits/unique_ptr.h
  /usr/include/c++/13/bits/unordered_map.h
- /usr/include/c++/13/bits/unordered_set.h
  /usr/include/c++/13/bits/uses_allocator.h
  /usr/include/c++/13/bits/uses_allocator_args.h
  /usr/include/c++/13/bits/utility.h
@@ -168,6 +170,7 @@ CMakeFiles/server.dir/src/server.cpp.o
  /usr/include/c++/13/locale
  /usr/include/c++/13/map
  /usr/include/c++/13/memory
+ /usr/include/c++/13/mutex
  /usr/include/c++/13/new
  /usr/include/c++/13/numeric
  /usr/include/c++/13/ostream
@@ -183,6 +186,7 @@ CMakeFiles/server.dir/src/server.cpp.o
  /usr/include/c++/13/string
  /usr/include/c++/13/string_view
  /usr/include/c++/13/system_error
+ /usr/include/c++/13/thread
  /usr/include/c++/13/tr1/bessel_function.tcc
  /usr/include/c++/13/tr1/beta_function.tcc
  /usr/include/c++/13/tr1/ell_integral.tcc
@@ -199,7 +203,6 @@ CMakeFiles/server.dir/src/server.cpp.o
  /usr/include/c++/13/type_traits
  /usr/include/c++/13/typeinfo
  /usr/include/c++/13/unordered_map
- /usr/include/c++/13/unordered_set
  /usr/include/c++/13/utility
  /usr/include/c++/13/valarray
  /usr/include/c++/13/vector
