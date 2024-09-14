@@ -1,62 +1,190 @@
-#include <iostream>
-#include <sys/socket.h>
 #include <arpa/inet.h>
+#include <cstring>
+#include <iostream>
+#include <mutex>
+#include <netinet/in.h>
+#include <string>
+#include <sys/socket.h>
+#include <thread>
 #include <unistd.h>
-#include <nlohmann/json.hpp>
+#include <vector>
+#include <algorithm>
+#include <nlohmann/json.hpp>  // Incluir la librería de JSON
 
-int main() {
-    int servidor_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (servidor_socket == -1) {
-        std::cerr << "No se pudo crear el socket del servidor.\n";
-        return -1;
+using json = nlohmann::json;
+using namespace std;
+
+#define MAX_LEN 512
+
+struct Client {
+    int socket;
+    std::string name;
+};
+
+vector<Client> clients;
+mutex clients_mutex;
+
+void handle_client(int client_socket);
+void broadcast_message(const string &message, int sender_socket);
+string trim(const string &str);
+
+int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        cerr << "Uso: " << argv[0] << " <IP> <Puerto>" << endl;
+        return 1;
     }
 
-    sockaddr_in servidor_dir;
-    servidor_dir.sin_family = AF_INET;
-    servidor_dir.sin_port = htons(8080);
-    servidor_dir.sin_addr.s_addr = INADDR_ANY;
+    string ip_address = argv[1];  
 
-    if (bind(servidor_socket, (sockaddr*)&servidor_dir, sizeof(servidor_dir)) == -1) {
-        std::cerr << "Error en bind.\n";
-        close(servidor_socket);
-        return -1;
+    if (ip_address == "localhost") {
+        ip_address = "127.0.0.1";
     }
 
-    if (listen(servidor_socket, 5) == -1) {
-        std::cerr << "Error en listen.\n";
-        close(servidor_socket);
-        return -1;
+    int port = stoi(argv[2]);  
+
+    int server_fd, new_socket;
+    struct sockaddr_in address;
+    int opt = 1;
+    int addrlen = sizeof(address);
+
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
     }
 
-    std::cout << "Esperando conexiones...\n";
-
-    sockaddr_in cliente_dir;
-    socklen_t cliente_len = sizeof(cliente_dir);
-    int cliente_socket = accept(servidor_socket, (sockaddr*)&cliente_dir, &cliente_len);
-    if (cliente_socket == -1) {
-        std::cerr << "Error al aceptar conexión.\n";
-        close(servidor_socket);
-        return -1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
     }
 
-    // Buffer para recibir datos
-    char buffer[1024] = {0};
-    int bytes_recibidos = recv(cliente_socket, buffer, 1024, 0);
-    if (bytes_recibidos == -1) {
-        std::cerr << "Error al recibir datos.\n";
-        close(cliente_socket);
-        close(servidor_socket);
-        return -1;
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);  
+
+    if (inet_pton(AF_INET, ip_address.c_str(), &address.sin_addr) <= 0) {
+        perror("Dirección invalida");
+        exit(EXIT_FAILURE);
     }
 
-    // Convertir los datos a JSON
-    std::string datos(buffer, bytes_recibidos);
-    auto json_recibido = nlohmann::json::parse(datos);
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
 
-    std::cout << "JSON recibido: " << json_recibido.dump(4) << "\n";
+    if (listen(server_fd, 10) < 0) {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
 
-    close(cliente_socket);
-    close(servidor_socket);
+    cout << "Servidor escuchando en " << ip_address << ": " << port << endl;
 
+    while (true) {
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
+            perror("accept");
+            exit(EXIT_FAILURE);
+        }
+
+        cout << "Nuevo cliente conectado" << endl;
+
+        thread t(handle_client, new_socket);
+        t.detach();
+    }
+
+    close(server_fd);
     return 0;
-}   
+}
+
+void handle_client(int client_socket) {
+    char buffer[MAX_LEN];
+    string name;
+
+    int bytes_read = recv(client_socket, buffer, MAX_LEN, 0);
+    if (bytes_read <= 0) {
+        close(client_socket);
+        return;
+    }
+
+    string received_message = string(buffer, bytes_read);
+
+    try {
+        // Parsear el mensaje JSON
+        json received_json = json::parse(received_message);
+
+        if (received_json["type"] == "IDENTIFY") {
+            name = received_json["username"];
+
+            // Respuesta de éxito
+            json response = {
+                {"type", "RESPONSE"},
+                {"operation", "IDENTIFY"},
+                {"result", "SUCCESS"},
+                {"extra", name}
+            };
+
+            string response_str = response.dump();
+            send(client_socket, response_str.c_str(), response_str.length(), 0);
+
+            {
+                lock_guard<mutex> guard(clients_mutex);
+                clients.push_back({client_socket, name});
+            }
+
+            string welcome_msg = "Bienvenido al chat, " + name + "!\n";
+            send(client_socket, welcome_msg.c_str(), welcome_msg.length(), 0);
+        }
+    } catch (json::parse_error &e) {
+        cerr << "Error al parsear JSON: " << e.what() << endl;
+    }
+
+    while (true) {
+        memset(buffer, 0, MAX_LEN);
+        bytes_read = recv(client_socket, buffer, MAX_LEN, 0);
+        if (bytes_read <= 0) {
+            cout << "Cliente desconectado: " << name << endl;
+            close(client_socket);
+
+            {
+                lock_guard<mutex> guard(clients_mutex);
+                clients.erase(remove_if(clients.begin(), clients.end(),
+                                        [client_socket](const Client &c) { return c.socket == client_socket; }),
+                              clients.end());
+            }
+            break;
+        }
+
+        string message(buffer, bytes_read);
+        message = trim(message);
+
+        if (message == "/exit") {
+            cout << "Cliente " << name << " ha enviado /exit. Desconectando...\n";
+            close(client_socket);
+
+            {
+                lock_guard<mutex> guard(clients_mutex);
+                clients.erase(remove_if(clients.begin(), clients.end(),
+                                        [client_socket](const Client &c) { return c.socket == client_socket; }),
+                              clients.end());
+            }
+            break;
+        }
+
+        message = name + ": " + message + "\n";
+        cout << message;
+
+        broadcast_message(message, client_socket);
+    }
+}
+
+void broadcast_message(const string &message, int sender_socket) {
+    lock_guard<mutex> guard(clients_mutex);
+    for (const auto &client : clients) {
+        if (client.socket != sender_socket) {
+            send(client.socket, message.c_str(), message.length(), 0);
+        }
+    }
+}
+
+string trim(const string &str) {
+    size_t first = str.find_first_not_of("\r\n");
+    size_t last = str.find_last_not_of("\r\n");
+    return str.substr(first, (last - first + 1));
+}

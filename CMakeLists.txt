@@ -28,3 +28,11 @@ FetchContent_MakeAvailable(json)
 
 # Enlazar la librería JSON
 #target_link_libraries(chat_cliente PRIVATE nlohmann_json::nlohmann_json)
+
+# Encuentra la biblioteca cJSON
+find_path(CJSON_INCLUDE_DIR cJSON.h)
+find_library(CJSON_LIBRARY cjson)
+
+
+# Enlaza la biblioteca cJSON al ejecutable del servidor
+target_link_libraries(server ${CJSON_LIBRARY})
